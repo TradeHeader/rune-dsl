@@ -132,13 +132,20 @@ public class TypeFactory {
 		return createListType(constrainedString(minLength, maxLength), single);
 	}
 	public RStringType constrainedString(Optional<Integer> minLength, Optional<Integer> maxLength, Optional<Pattern> pattern) {
-		return new RStringType(minLength, maxLength, pattern);
+		return new RStringType(minLength, maxLength, pattern, Optional.empty(), Optional.empty());
 	}
 	public RStringType constrainedString(PositiveIntegerInterval interval, Optional<Pattern> pattern) {
-		return new RStringType(interval, pattern);
+		return new RStringType(interval, pattern, Optional.empty(), Optional.empty());
 	}
 	public RStringType constrainedString(int minLength, int maxLength) {
-		return new RStringType(Optional.of(minLength), Optional.of(maxLength), Optional.empty());
+		return new RStringType(Optional.of(minLength), Optional.of(maxLength), Optional.empty(), Optional.empty(), Optional.empty());
+	}
+	//TH: Should extend provider coverage?
+	public RStringType constrainedString(Optional<Integer> minLength, Optional<Integer> maxLength, Optional<Pattern> pattern, Optional<String> domainRule, Optional<String> domainIdentifier) {
+		return new RStringType(minLength, maxLength, pattern, domainRule, domainIdentifier);
+	}
+	public RStringType constrainedString(Optional<Integer> minLength, Optional<Integer> maxLength, Optional<String> domainRule, Optional<String> domainIdentifier) {
+		return new RStringType(minLength, maxLength, Optional.empty(), domainRule, domainIdentifier);
 	}
 	
 	public RosettaCardinality createConstraint(int inf, int sup) {

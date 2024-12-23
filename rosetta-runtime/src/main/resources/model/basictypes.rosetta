@@ -14,6 +14,8 @@ basicType string(
     minLength int  <"The minimum number of characters that the string must have. If absent, defaults to zero.">
   , maxLength int  <"The maximum number of characters that the string may have. If absent, there is no limit.">
   , pattern string <"The regular expression that this string must match. If absent, this string may contain arbitrary characters.">
+  , validationRule string <"Domain rule">
+  , domain string <"Domain identifier">
 ) <"A string of characters.">
 
 basicType time <"The time of the day - hour-minute-second.">

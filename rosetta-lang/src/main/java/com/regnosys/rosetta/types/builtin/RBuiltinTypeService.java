@@ -85,7 +85,8 @@ public class RBuiltinTypeService {
 	public final RMetaAnnotatedType UNCONSTRAINED_INT_WITH_NO_META = new RMetaAnnotatedType(UNCONSTRAINED_INT, List.of());
 	public final RNumberType UNCONSTRAINED_NUMBER = new RNumberType(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
 	public final RMetaAnnotatedType UNCONSTRAINED_NUMBER_WITH_NO_META = new RMetaAnnotatedType(UNCONSTRAINED_NUMBER, List.of());
-	public final RStringType UNCONSTRAINED_STRING = new RStringType(Optional.empty(), Optional.empty(), Optional.empty());
+	//TH: Upgrade with new params
+	public final RStringType UNCONSTRAINED_STRING = new RStringType(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
 	public final RMetaAnnotatedType UNCONSTRAINED_STRING_WITH_NO_META = new RMetaAnnotatedType(UNCONSTRAINED_STRING, List.of());
 	
 	public final RDateType DATE = registerConstantType(new RDateType());

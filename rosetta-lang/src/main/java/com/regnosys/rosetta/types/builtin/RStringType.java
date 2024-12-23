@@ -31,12 +31,19 @@ public class RStringType extends RBasicType {
 	public static final String MIN_LENGTH_PARAM_NAME = "minLength";
 	public static final String MAX_LENGTH_PARAM_NAME = "maxLength";
 	public static final String PATTERN_PARAM_NAME = "pattern";
+	//TH
+	public static final String VALIDATIONRULE_PARAM_NAME = "validationRule";
+	public static final String DOMAIN_PARAM_NAME = "domain";
 
 	private final PositiveIntegerInterval interval;
 	private final Optional<Pattern> pattern;
+	//TODO TH: `domain` parametrized string with function - Generics, RosettaFunction, java reflection? required guice injection for impl (in model)
+	private final Optional<String> domainRule;
+	private final Optional<String> domainIdentifier;
+	
 
 	private static LinkedHashMap<String, RosettaValue> createArgumentMap(PositiveIntegerInterval interval,
-			Optional<Pattern> pattern) {
+			Optional<Pattern> pattern, Optional<String> domainRule, Optional<String> domainIdentifier) {
 		LinkedHashMap<String, RosettaValue> arguments = new LinkedHashMap<>();
 		int minBound = interval.getMinBound();
 		arguments.put(MIN_LENGTH_PARAM_NAME, minBound == 0 ? RosettaValue.empty() : RosettaNumberValue.of(RosettaNumber.valueOf(minBound)));
@@ -44,23 +51,36 @@ public class RStringType extends RBasicType {
 				.orElseGet(() -> RosettaValue.empty()));
 		arguments.put(PATTERN_PARAM_NAME,
 				pattern.<RosettaValue>map(p -> RosettaStringValue.of(p.toString())).orElseGet(() -> RosettaValue.empty()));
+		//TH: domain arguments creation
+		arguments.put(VALIDATIONRULE_PARAM_NAME,
+				domainRule.<RosettaValue>map(s -> RosettaStringValue.of(s.toString())).orElseGet(()->RosettaValue.empty()));
+		arguments.put(DOMAIN_PARAM_NAME, 
+				domainIdentifier.<RosettaValue>map(s -> RosettaStringValue.of(s.toString())).orElseGet(()->RosettaValue.empty()));
+
 		return arguments;
 	}
-
-	public RStringType(PositiveIntegerInterval interval, Optional<Pattern> pattern) {
-		super("string", createArgumentMap(interval, pattern), true);
+	
+	//TH: builtin type creator upgrade. Inspect override at project level
+	public RStringType(PositiveIntegerInterval interval, Optional<Pattern> pattern,
+			Optional<String> domainRule, Optional<String> domainIdentifier) {
+		super("string", createArgumentMap(interval, pattern, domainRule, domainIdentifier), true);
 		this.interval = interval;
 		this.pattern = pattern;
+		this.domainRule = domainRule;
+		this.domainIdentifier = domainIdentifier;
 	}
 
-	public RStringType(Optional<Integer> minLength, Optional<Integer> maxLength, Optional<Pattern> pattern) {
-		this(new PositiveIntegerInterval(minLength.orElse(0), maxLength), pattern);
+	public RStringType(Optional<Integer> minLength, Optional<Integer> maxLength, Optional<Pattern> pattern, 
+			Optional<String> domainRule, Optional<String> domainIdentifier) {
+		this(new PositiveIntegerInterval(minLength.orElse(0), maxLength), pattern, domainRule, domainIdentifier);
 	}
 
 	public static RStringType from(Map<String, RosettaValue> values) {
 		return new RStringType(values.getOrDefault(MIN_LENGTH_PARAM_NAME, RosettaValue.empty()).getSingle(RosettaNumber.class).map(d -> d.intValue()),
 				values.getOrDefault(MAX_LENGTH_PARAM_NAME, RosettaValue.empty()).getSingle(RosettaNumber.class).map(d -> d.intValue()),
-				values.getOrDefault(PATTERN_PARAM_NAME, RosettaValue.empty()).getSingle(String.class).map(s -> Pattern.compile(s)));
+				values.getOrDefault(PATTERN_PARAM_NAME, RosettaValue.empty()).getSingle(String.class).map(s -> Pattern.compile(s)),
+				values.getOrDefault(VALIDATIONRULE_PARAM_NAME, RosettaValue.empty()).getSingle(String.class),
+				values.getOrDefault(DOMAIN_PARAM_NAME, RosettaValue.empty()).getSingle(String.class));
 	}
 
 	public PositiveIntegerInterval getInterval() {
@@ -69,6 +89,14 @@ public class RStringType extends RBasicType {
 
 	public Optional<Pattern> getPattern() {
 		return pattern;
+	}
+	
+	public Optional<String> getDomainRule() {
+		return domainRule;
+	}
+	
+	public Optional<String> getDomainIdentifier() {
+		return domainIdentifier;
 	}
 
 	public RStringType join(RStringType other) {
@@ -86,6 +114,26 @@ public class RStringType extends RBasicType {
 		} else {
 			joinedPattern = other.pattern;
 		}
-		return new RStringType(interval.minimalCover(other.interval), joinedPattern);
+		//TH: How should join work for "domain" fields.
+		//TH TODO: Should avoid joining domain parametrized strings?
+		Optional<String> joinedDomainRule, joinedDomainIdentifier;
+		if (domainRule.isPresent()) {
+			if (other.domainRule.isPresent()) {
+				if (domainRule.get().equals(other.domainRule.get())) {
+					joinedDomainRule = domainRule;
+					joinedDomainIdentifier = domainIdentifier;
+				} else {
+					joinedDomainRule = Optional.empty();
+					joinedDomainIdentifier = Optional.empty();
+				}
+			} else {
+				joinedDomainRule = domainRule;
+				joinedDomainIdentifier = domainIdentifier;
+			}
+		} else {
+			joinedDomainRule = other.domainRule;
+			joinedDomainIdentifier = other.domainIdentifier;
+		}
+		return new RStringType(interval.minimalCover(other.interval), joinedPattern, joinedDomainRule, joinedDomainIdentifier);
 	}
 }

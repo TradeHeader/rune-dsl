@@ -33,7 +33,8 @@ class RosettaOperators {
 					val s1 = l as RStringType
 					val s2 = r as RStringType
 					val newInterval = s1.interval.add(s2.interval)
-					new RStringType(newInterval, Optional.empty())
+					//TH: Update with new params
+					new RStringType(newInterval, Optional.empty(), Optional.empty(), Optional.empty())
 				])
 			} else if (left.isSubtypeOf(UNCONSTRAINED_NUMBER) && right.isSubtypeOf(UNCONSTRAINED_NUMBER)) {
 				keepTypeAliasIfPossible(left, right, [l,r|

@@ -280,11 +280,14 @@ class RosettaParsingTest {
 	    ]
 	}
 	
+	//TH: Tests for new parametrized string representation
+	
 	@Test
 	def void testTypeAliases() {
 		'''
 			typeAlias int(digits int, min int, max int): number(digits: digits, fractionalDigits: 0, min: min, max: max)
 			typeAlias max4String: string(minLength: 1, maxLength: 4)
+			typeAlias currency: string(validationRule:"IsValidCode", domain:"currency-code")
 		'''.parseRosettaWithNoIssues
 	}
 	
@@ -295,6 +298,7 @@ class RosettaParsingTest {
 			basicType int(digits int, min int, max int)
 			basicType number(digits int, fractionalDigits int, min number, max number)
 			basicType string(minLength int, maxLength int, pattern pattern)
+			basicType domain(pattern pattern, validationRule string, domain string)
 		'''.parseRosettaWithNoIssues
 	}
 	
