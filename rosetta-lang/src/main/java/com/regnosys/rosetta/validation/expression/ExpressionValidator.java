@@ -1,5 +1,12 @@
 package com.regnosys.rosetta.validation.expression;
 
+import jakarta.inject.Inject;
+
+import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.xtext.EcoreUtil2;
+import org.eclipse.xtext.validation.Check;
+import org.eclipse.xtext.validation.ComposedChecks;
+
 import com.google.common.collect.Iterables;
 import com.regnosys.rosetta.RosettaEcoreUtil;
 import com.regnosys.rosetta.generator.util.RosettaFunctionExtensions;
@@ -15,12 +22,7 @@ import com.regnosys.rosetta.types.RMetaAnnotatedType;
 import com.regnosys.rosetta.types.RType;
 import com.regnosys.rosetta.utils.ExpressionHelper;
 import com.regnosys.rosetta.utils.ImplicitVariableUtil;
-import org.eclipse.emf.ecore.EStructuralFeature;
-import org.eclipse.xtext.EcoreUtil2;
-import org.eclipse.xtext.validation.Check;
-import org.eclipse.xtext.validation.ComposedChecks;
 
-import javax.inject.Inject;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +43,7 @@ public class ExpressionValidator extends AbstractExpressionValidator {
 	private RosettaEcoreUtil ecoreUtil;
 	@Inject
 	private RosettaFunctionExtensions functionExtensions;
+	
 	@Check
 	public void checkWithMetaOperation(WithMetaOperation operation) {
 		RosettaExpression argument = operation.getArgument();
@@ -287,7 +290,7 @@ public class ExpressionValidator extends AbstractExpressionValidator {
 				} else if (callable instanceof RosettaRule) {
 					RosettaRule f = (RosettaRule) callable;
 					if (minCount >= 1) {
-						RMetaAnnotatedType paramType = withNoMeta(typeSystem.typeCallToRType(f.getInput()));
+						RMetaAnnotatedType paramType = withNoMeta(typeSystem.getRuleInputType(f));
 						RosettaExpression arg = expr.getArgs().get(0);
 						isSingleCheck(arg, expr, ROSETTA_SYMBOL_REFERENCE__RAW_ARGS, 0, null);
 						subtypeCheck(paramType, arg, expr, ROSETTA_SYMBOL_REFERENCE__RAW_ARGS, 0, actual -> "Rule `" + f.getName() + "` cannot be called with type `" + actual + "`");
@@ -305,6 +308,14 @@ public class ExpressionValidator extends AbstractExpressionValidator {
 								ROSETTA_SYMBOL_REFERENCE__SYMBOL
 							);
 						}
+					}
+				}
+				if (s instanceof RosettaEnumeration) {
+					if (!(expr.eContainer() instanceof RosettaFeatureCall)) {
+						var enumValues = ((RosettaEnumeration) s).getEnumValues().stream()
+								.map(v -> v.getName())
+								.collect(Collectors.joining(", "));
+						error("Enum type `" + s.getName() + "` must be followed by ` -> <enum value>`. Possible values are: " + enumValues, expr, ROSETTA_SYMBOL_REFERENCE__SYMBOL);
 					}
 				}
 				if (expr.isExplicitArguments()) {

@@ -16,7 +16,7 @@
 
 package com.regnosys.rosetta.derivedstate;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.ecore.EObject;
@@ -47,7 +47,9 @@ public class RosettaDerivedStateComputer implements IDerivedStateComputer {
 	
 	@Override
 	public void installDerivedState(DerivedStateAwareResource resource, boolean preLinkingPhase) {
-		setAllDerivedState(resource.getAllContents());
+		if (!preLinkingPhase) {
+			setAllDerivedState(resource.getAllContents());
+		}
 	}
 
 	@Override

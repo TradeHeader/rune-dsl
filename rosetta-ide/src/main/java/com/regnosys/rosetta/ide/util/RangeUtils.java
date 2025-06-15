@@ -18,7 +18,7 @@ package com.regnosys.rosetta.ide.util;
 
 import java.util.Iterator;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import org.eclipse.emf.common.util.AbstractTreeIterator;
 import org.eclipse.emf.common.util.TreeIterator;
@@ -48,15 +48,12 @@ public class RangeUtils {
 	public Range getRange(EObject obj) {
 		return documentExtensions.newFullLocation(obj).getRange();
 	}
-	
 	public Range getRange(EObject obj, EStructuralFeature feature) {
 		return getRange(obj, feature, INSIGNIFICANT_INDEX);
 	}
-	
 	public Range getRange(EObject obj, EStructuralFeature feature, int featureIndex) {
 		return documentExtensions.newLocation(obj, feature, featureIndex).getRange();
 	}
-	
 	public Range getRange(EObject obj, Keyword keyword) {
 		ICompositeNode node = NodeModelUtils.findActualNodeFor(obj);
 		for (INode child: node.getChildren()) {
@@ -84,11 +81,9 @@ public class RangeUtils {
 	public boolean overlap(Range a, Range b) {
 		return strictlyComesBefore(a.getStart(), b.getEnd()) && strictlyComesBefore(b.getStart(), a.getEnd());
 	}
-	
 	public boolean overlap(Range a, EObject b) {
 		return overlap(a, getRange(b));
 	}
-	
 	public boolean overlap(EObject a, EObject b) {
 		return overlap(getRange(a), getRange(b));
 	}

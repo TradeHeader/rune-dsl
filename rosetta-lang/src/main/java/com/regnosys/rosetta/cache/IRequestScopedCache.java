@@ -1,9 +1,12 @@
 package com.regnosys.rosetta.cache;
 
-import javax.inject.Provider;
+import jakarta.inject.Provider;
 
-public interface IRequestScopedCache {
-	<T> T get(Object key, Provider<T> provider);
+/**
+ * A cache that will clear every time a write request is made. For all subsequent read requests, the cache is reused.
+ */
+interface IRequestScopedCache<K, V> {
+	V get(K key, Provider<? extends V> provider);
 	
 	void clear();
 }

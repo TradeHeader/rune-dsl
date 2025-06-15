@@ -18,7 +18,7 @@ import org.eclipse.xtext.xbase.testing.RegisteringFileSystemAccess
 
 import static com.google.common.collect.ImmutableMap.*
 import com.rosetta.model.lib.RosettaModelObject
-import javax.inject.Inject
+import jakarta.inject.Inject
 import com.regnosys.rosetta.tests.compiler.InMemoryJavacCompiler
 import com.regnosys.rosetta.utils.ModelIdProvider
 import com.rosetta.model.lib.RosettaModelObjectBuilder
@@ -55,10 +55,23 @@ class CodeGeneratorTestHelper {
 		generateCode(#[eResource])
 	}
 	
-	protected def generateCode(List<Resource> resources) {
+	protected def Map<String, String> generateCode(List<Resource> resources) {
+		val fsa = generateCodeWithFSA(resources)
+		
+		val generatedCode = newLinkedHashMap
+		fsa.generatedFiles.forEach [
+			if (it.getJavaClassName() !== null) {
+				generatedCode.put(it.getJavaClassName(), it.getContents().toString());
+			}
+		]
+		
+		return generatedCode
+	}
+	
+	def generateCodeWithFSA(List<Resource> resources) {
 		val fsa = new RegisteringFileSystemAccess()
 		val ctx = new GeneratorContext()=> [
-			cancelIndicator =  CancelIndicator.NullImpl
+			cancelIndicator = CancelIndicator.NullImpl
 		]
 		val resourceSet = resources.head.resourceSet
 		try {
@@ -75,14 +88,7 @@ class CodeGeneratorTestHelper {
 			resourceSet.afterAllGenerate(fsa, ctx)
 		}
 		
-		val generatedCode = newHashMap
-		fsa.generatedFiles.forEach [
-			if (it.getJavaClassName() !== null) {
-				generatedCode.put(it.getJavaClassName(), it.getContents().toString());
-			}
-		]
-		
-		return generatedCode
+		return fsa
 	}
 	
 	def generateCode(RosettaModel model) {

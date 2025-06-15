@@ -71,15 +71,13 @@ import java.util.List
 import java.util.Map
 import java.util.Optional
 import java.util.stream.Collectors
-import javax.inject.Inject
+import jakarta.inject.Inject
 import org.eclipse.xtend2.lib.StringConcatenationClient
 import org.eclipse.xtext.generator.IFileSystemAccess2
 
 import static com.regnosys.rosetta.generator.java.enums.EnumHelper.*
 
 import static extension com.regnosys.rosetta.types.RMetaAnnotatedType.withNoMeta
-import com.regnosys.rosetta.generator.java.types.RJavaReferenceWithMeta
-import com.regnosys.rosetta.generator.java.types.RJavaPojoInterface
 import static extension com.regnosys.rosetta.utils.PojoPropertyUtil.*
 
 class FunctionGenerator {
@@ -226,11 +224,11 @@ class FunctionGenerator {
 			public «IF isStatic»static «ENDIF»abstract class «className» implements «FOR fInterface : functionInterfaces SEPARATOR ","»«fInterface»«ENDFOR» {
 				«IF !preConditions.empty || !postConditions.empty»
 					
-					@«Inject» protected «ConditionValidator» «conditionValidatorId»;
+					@«javax.inject.Inject» protected «ConditionValidator» «conditionValidatorId»;
 				«ENDIF»
 				«IF output.needsBuilder»
 					
-					@«Inject» protected «ModelObjectValidator» «objectValidatorId»;
+					@«javax.inject.Inject» protected «ModelObjectValidator» «objectValidatorId»;
 				«ENDIF»
 				«IF !dependencies.empty»
 					
@@ -238,7 +236,7 @@ class FunctionGenerator {
 					//
 				«ENDIF»
 				«FOR dep : dependencies»
-					@«Inject» protected «dep» «classScope.getIdentifierOrThrow(dep.toDependencyInstance)»;
+					@«javax.inject.Inject» protected «dep» «classScope.getIdentifierOrThrow(dep.toDependencyInstance)»;
 				«ENDFOR»
 			
 				/**
@@ -365,11 +363,11 @@ class FunctionGenerator {
 		«javadoc(function.definition, function.references, version)»
 		public class «className» implements «RosettaFunction» {
 			«FOR dep : dependencies»
-				@«Inject» protected «dep» «dep.simpleName.toFirstLower»;
+				@«javax.inject.Inject» protected «dep» «dep.simpleName.toFirstLower»;
 			«ENDFOR»
 			
 			«FOR enumFunc : dispatchingFuncs»
-				@«Inject» protected «toDispatchClass(enumFunc)» «classScope.getIdentifierOrThrow(enumFunc)»;
+				@«javax.inject.Inject» protected «toDispatchClass(enumFunc)» «classScope.getIdentifierOrThrow(enumFunc)»;
 			«ENDFOR»
 			
 			public «outputType» evaluate(«function.inputsAsParameters(evaluateScope)») {
@@ -387,8 +385,8 @@ class FunctionGenerator {
 				«val rFunction = new RFunction(
 					new ModelSymbolId(function.model.toDottedPath, function.name + formatEnumName(enumFunc.value.value.name)),
 					enumFunc.definition,
-					function.inputs.map[rTypeBuilderFactory.buildRAttribute(it)],
-					rTypeBuilderFactory.buildRAttribute(function.output),
+					function.inputs.map[rTypeBuilderFactory.buildRAttributeWithEnclosingType(null, it)],
+					rTypeBuilderFactory.buildRAttributeWithEnclosingType(null, function.output),
 					RFunctionOrigin.FUNCTION,
 					enumFunc.conditions,
 					enumFunc.postConditions,
@@ -485,12 +483,12 @@ class FunctionGenerator {
 					val outputExpressionType = expr.expressionType.itemType
 					val prop = getPojoProperty(seg, outputExpressionType)
 					
-					val propertySetterName = getPropertySetterName(outputExpressionType, prop, seg)
 					val requiresValueSetter = requiresValueSetter(outputExpressionType, prop, seg, op)
+					val propertySetterName = getPropertySetterName(outputExpressionType, prop, seg, op.ROperationType, requiresValueSetter)
 					expr = JavaExpression.from(
 						'''
 						«oldExpr»
-							«generateMetaWrapperCreator(seg, prop, outputExpressionType)».«IF op.ROperationType == ROperationType.ADD»add«ELSE»set«ENDIF»«propertySetterName»«IF requiresValueSetter»Value«ENDIF»(«it»)''',
+							«generateMetaWrapperCreator(seg, prop, outputExpressionType)».«propertySetterName»(«it»)''',
 						JavaPrimitiveType.VOID
 					)
 					
@@ -499,11 +497,29 @@ class FunctionGenerator {
 		}
 	}
 	
-	private def String getPropertySetterName(JavaType outputExpressionType, JavaPojoProperty prop, RFeature segment) {
+	private def String getPropertySetterName(JavaType outputExpressionType, JavaPojoProperty prop, RFeature segment, ROperationType operationType, boolean requiresValueSetter) {
 		if (outputExpressionType instanceof RJavaWithMetaValue || (segment instanceof RMetaAttribute && outputExpressionType instanceof RJavaPojoInterface)) {
-			segment.toPojoPropertyName.toFirstUpper
+			val prefix = operationType == ROperationType.ADD ? "add" : "set"
+			val segmentPropName = segment.toPojoPropertyName.toFirstUpper
+			if (requiresValueSetter) {
+				prefix + segmentPropName + "Value"
+			} else {
+				prefix + segmentPropName
+			}
 		} else {
-			prop.name.toFirstUpper
+			if (requiresValueSetter) {
+				if (operationType == ROperationType.ADD) {
+					prop.valueAdderName
+				} else {
+					prop.valueSetterName
+				}
+			} else {
+				if (operationType == ROperationType.ADD) {
+					prop.adderName
+				} else {
+					prop.setterName
+				}
+			}
 		}
 	}
 	

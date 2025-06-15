@@ -20,38 +20,34 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.lsp4j.CodeAction;
-import org.eclipse.lsp4j.CodeActionKind;
-import org.eclipse.lsp4j.CodeActionOptions;
 import org.eclipse.lsp4j.CodeActionParams;
 import org.eclipse.lsp4j.FormattingOptions;
-import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.InlayHintParams;
-import org.eclipse.lsp4j.InlayHintRegistrationOptions;
 import org.eclipse.lsp4j.SemanticTokens;
 import org.eclipse.lsp4j.SemanticTokensDelta;
 import org.eclipse.lsp4j.SemanticTokensDeltaParams;
 import org.eclipse.lsp4j.SemanticTokensParams;
 import org.eclipse.lsp4j.SemanticTokensRangeParams;
-import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions;
-import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.xtext.ide.server.Document;
 import org.eclipse.xtext.ide.server.ILanguageServerAccess;
 import org.eclipse.xtext.ide.server.LanguageServerImpl;
 import org.eclipse.xtext.ide.server.codeActions.ICodeActionService2;
 import org.eclipse.xtext.ide.server.codeActions.ICodeActionService2.Options;
-import org.eclipse.xtext.resource.IResourceServiceProvider;
 import org.eclipse.xtext.resource.XtextResource;
 import org.eclipse.xtext.util.CancelIndicator;
 
 import com.regnosys.rosetta.formatting2.FormattingOptionsService;
 import com.regnosys.rosetta.ide.inlayhints.IInlayHintsResolver;
 import com.regnosys.rosetta.ide.inlayhints.IInlayHintsService;
+import com.regnosys.rosetta.ide.overrides.IParentsService;
+import com.regnosys.rosetta.ide.overrides.ParentsParams;
+import com.regnosys.rosetta.ide.overrides.ParentsResult;
 import com.regnosys.rosetta.ide.quickfix.IResolveCodeActionService;
 import com.regnosys.rosetta.ide.semantictokens.ISemanticTokensService;
 import com.regnosys.rosetta.ide.semantictokens.SemanticToken;
@@ -61,43 +57,16 @@ import com.regnosys.rosetta.ide.util.CodeActionUtils;
  * TODO: contribute to Xtext.
  *
  */
-public class RosettaLanguageServerImpl extends LanguageServerImpl  implements RosettaLanguageServer{
+public class RosettaLanguageServerImpl extends LanguageServerImpl implements RosettaLanguageServer, RosettaTextDocumentService {
 	@Inject FormattingOptionsService formattingOptionsService;
 	@Inject CodeActionUtils codeActionUtils;
-
+	
 	@Override
-	protected ServerCapabilities createServerCapabilities(InitializeParams params) {
-		ServerCapabilities serverCapabilities = super.createServerCapabilities(params);
-		IResourceServiceProvider resourceServiceProvider = getResourceServiceProvider(URI.createURI("synth:///file.rosetta"));
-
-		if (resourceServiceProvider.get(IInlayHintsService.class) != null) {
-			InlayHintRegistrationOptions inlayHintRegistrationOptions = new InlayHintRegistrationOptions();
-			inlayHintRegistrationOptions.setResolveProvider(resourceServiceProvider.get(IInlayHintsResolver.class) != null);
-			serverCapabilities.setInlayHintProvider(inlayHintRegistrationOptions);
-		}
-		
-		if (resourceServiceProvider.get(ICodeActionService2.class) != null) {
-            CodeActionOptions codeActionProvider = new CodeActionOptions();
-            codeActionProvider.setResolveProvider(true);
-            codeActionProvider.setCodeActionKinds(List.of(CodeActionKind.QuickFix, CodeActionKind.SourceOrganizeImports));
-            codeActionProvider.setWorkDoneProgress(true);
-            serverCapabilities.setCodeActionProvider(codeActionProvider);
-        }
-		
-		ISemanticTokensService semanticTokensService = resourceServiceProvider.get(ISemanticTokensService.class);
-		if (semanticTokensService != null) {
-			SemanticTokensWithRegistrationOptions semanticTokensOptions = new SemanticTokensWithRegistrationOptions();
-			semanticTokensOptions.setLegend(semanticTokensService.getLegend());
-			semanticTokensOptions.setFull(true);
-			semanticTokensOptions.setRange(true);
-			serverCapabilities.setSemanticTokensProvider(semanticTokensOptions);
-		}
-		
-		return serverCapabilities;
+	public RosettaTextDocumentService getRosettaTextDocumentService() {
+		return this;
 	}
 
 	/*** INLAY HINTS ***/
-	
 	protected List<InlayHint> inlayHint(InlayHintParams params, CancelIndicator cancelIndicator) {
 		URI uri = this.getURI(params.getTextDocument());
 		return this.getWorkspaceManager().doRead(uri, (document, resource) -> {
@@ -155,20 +124,10 @@ public class RosettaLanguageServerImpl extends LanguageServerImpl  implements Ro
 	
 	/*** SEMANTIC TOKENS ***/
 	public List<SemanticToken> semanticTokens(SemanticTokensParams params, CancelIndicator cancelIndicator) {
-		URI uri = this.getURI(params.getTextDocument());
-		return this.getWorkspaceManager().doRead(uri, (document, resource) -> {
+		URI uri = getURI(params.getTextDocument());
+		return getWorkspaceManager().doRead(uri, (document, resource) -> {
 			ISemanticTokensService service = getService(uri, ISemanticTokensService.class);
 			return service.computeSemanticTokens(document, resource, params, cancelIndicator);
-		});
-	}
-	
-	protected SemanticTokens semanticTokensFull(SemanticTokensParams params, CancelIndicator cancelIndicator) {
-		URI uri = this.getURI(params.getTextDocument());
-		return this.getWorkspaceManager().doRead(uri, (document, resource) -> {
-			ISemanticTokensService service = getService(uri, ISemanticTokensService.class);
-			List<SemanticToken> tokens = service.computeSemanticTokens(document, resource, params, cancelIndicator);
-			SemanticTokens result = service.toSemanticTokensResponse(tokens);
-			return result;
 		});
 	}
 	
@@ -177,7 +136,18 @@ public class RosettaLanguageServerImpl extends LanguageServerImpl  implements Ro
 	 */
 	@Override
 	public CompletableFuture<SemanticTokens> semanticTokensFull(SemanticTokensParams params) {
-		return this.getRequestManager().runRead((cancelIndicator) -> this.semanticTokensFull(params, cancelIndicator));
+		return getRequestManager().runRead((cancelIndicator) -> semanticTokensFull(params, cancelIndicator));
+	}
+	
+	@Override
+	protected SemanticTokens semanticTokensFull(SemanticTokensParams params, CancelIndicator cancelIndicator) {
+		URI uri = getURI(params.getTextDocument());
+		return getWorkspaceManager().doRead(uri, (document, resource) -> {
+			ISemanticTokensService service = getService(uri, ISemanticTokensService.class);
+			List<SemanticToken> tokens = service.computeSemanticTokens(document, resource, params, cancelIndicator);
+			SemanticTokens result = service.toSemanticTokensResponse(tokens);
+			return result;
+		});
 	}
 	
 	/**
@@ -188,16 +158,6 @@ public class RosettaLanguageServerImpl extends LanguageServerImpl  implements Ro
 		throw new UnsupportedOperationException();
 	}
 	
-	protected SemanticTokens semanticTokensRange(SemanticTokensRangeParams params, CancelIndicator cancelIndicator) {
-		URI uri = this.getURI(params.getTextDocument());
-		return this.getWorkspaceManager().doRead(uri, (document, resource) -> {
-			ISemanticTokensService service = getService(uri, ISemanticTokensService.class);
-			List<SemanticToken> tokens = service.computeSemanticTokensInRange(document, resource, params, cancelIndicator);
-			SemanticTokens result = service.toSemanticTokensResponse(tokens);
-			return result;
-		});
-	}
-	
 	/**
 	 * LSP method: textDocument/semanticTokens/range
 	 */
@@ -205,12 +165,24 @@ public class RosettaLanguageServerImpl extends LanguageServerImpl  implements Ro
 	public CompletableFuture<SemanticTokens> semanticTokensRange(SemanticTokensRangeParams params) {
 		return this.getRequestManager().runRead((cancelIndicator) -> this.semanticTokensRange(params, cancelIndicator));
 	}
+	
+	protected SemanticTokens semanticTokensRange(SemanticTokensRangeParams params, CancelIndicator cancelIndicator) {
+		URI uri = getURI(params.getTextDocument());
+		return getWorkspaceManager().doRead(uri, (document, resource) -> {
+			ISemanticTokensService service = getService(uri, ISemanticTokensService.class);
+			List<SemanticToken> tokens = service.computeSemanticTokensInRange(document, resource, params, cancelIndicator);
+			SemanticTokens result = service.toSemanticTokensResponse(tokens);
+			return result;
+		});
+	}
 
+	/*** FORMATTING ***/
 	@Override
 	public CompletableFuture<FormattingOptions> getDefaultFormattingOptions() {
 		return CompletableFuture.completedFuture(formattingOptionsService.getDefaultOptions());
 	}
 	
+	/*** CODE ACTIONS ***/
 	@Override
 	public CompletableFuture<CodeAction> resolveCodeAction(CodeAction unresolved) {
 		return getRequestManager().runRead((cancelIndicator) -> this.resolveCodeAction(unresolved, cancelIndicator));
@@ -233,8 +205,6 @@ public class RosettaLanguageServerImpl extends LanguageServerImpl  implements Ro
 			return resolveCodeActionService.getCodeActionResolution(codeAction, baseOptions);
 		});
 	}
-	
-	
 
 	private Options createCodeActionBaseOptions(Document doc, XtextResource resource,
 			ILanguageServerAccess languageServerAcces, CodeActionParams codeActionParams,
@@ -248,5 +218,18 @@ public class RosettaLanguageServerImpl extends LanguageServerImpl  implements Ro
 
 		return baseOptions;
 	}
+
+	/*** PARENTS ***/
+	@Override
+	public CompletableFuture<List<? extends ParentsResult>> parents(ParentsParams params) {
+		return getRequestManager().runRead((cancelIndicator) -> this.parents(params, cancelIndicator));
+	}
 	
+	protected List<? extends ParentsResult> parents(ParentsParams params, CancelIndicator cancelIndicator) {
+		URI uri = this.getURI(params.getTextDocument());
+		return this.getWorkspaceManager().doRead(uri, (document, resource) -> {
+			IParentsService service = getService(uri, IParentsService.class);
+			return service.computeParents(document, resource, params, cancelIndicator);
+		});
+	}
 }

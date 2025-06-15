@@ -38,7 +38,7 @@ import com.rosetta.util.types.generated.GeneratedJavaClass;
 import com.rosetta.util.types.generated.GeneratedJavaClassService;
 import com.rosetta.util.types.generated.GeneratedJavaGenericTypeDeclaration;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.LocalDateTime;
@@ -202,7 +202,7 @@ public class JavaTypeTranslator extends RosettaTypeSwitch<JavaType, Void> {
 		if (op.getPathTail().isEmpty()) {
 			feature = (RFeature)op.getPathHead(); // TODO: this won't work when assigning to an alias
 		} else {
-			List<RFeature> segments = op.getPathTail();
+			List<? extends RFeature> segments = op.getPathTail();
 			feature = segments.get(segments.size() - 1);
 		}
 		return toMetaJavaType(feature);
@@ -212,7 +212,7 @@ public class JavaTypeTranslator extends RosettaTypeSwitch<JavaType, Void> {
 		if (op.getPathTail().isEmpty()) {
 			feature = (RFeature)op.getPathHead(); // TODO: this won't work when assigning to an alias
 		} else {
-			List<RFeature> segments = op.getPathTail();
+			List<? extends RFeature> segments = op.getPathTail();
 			feature = segments.get(segments.size() - 1);
 		}
 		return toJavaType(feature);
@@ -222,7 +222,7 @@ public class JavaTypeTranslator extends RosettaTypeSwitch<JavaType, Void> {
 		if (op.getPathTail().isEmpty()) {
 			feature = (RFeature)op.getPathHead(); // TODO: this won't work when assigning to an alias
 		} else {
-			List<RFeature> segments = op.getPathTail();
+			List<? extends RFeature> segments = op.getPathTail();
 			feature = segments.get(segments.size() - 1);
 		}
 		if (feature instanceof RAttribute) {

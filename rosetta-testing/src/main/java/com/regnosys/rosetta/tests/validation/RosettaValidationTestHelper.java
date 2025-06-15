@@ -18,9 +18,10 @@ public class RosettaValidationTestHelper extends ValidationTestHelper {
 	public void assertIssues(EObject model, String issuesExpectation) {
 		List<Issue> issues = validate(model);
 		
-		String issuesRepresentation = getIssuesAsString(model, issues, new StringBuilder()).toString();
+		String issuesRepresentation = getIssuesAsString(model, issues, new StringBuilder()).toString().trim();
 		
-		Assertions.assertEquals(issuesExpectation, issuesRepresentation);
+		Assertions.assertEquals(issuesExpectation.trim(), issuesRepresentation);
+		Assertions.assertNotEquals("", issuesRepresentation, "No issues were found. When asserting for issues, the expected issues may not be empty. Use the method ValidationTestHelper#assertNoIssues instead.");
 	}
 	
 	@Override

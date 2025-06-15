@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import org.xmlet.xsdparser.xsdelements.XsdAbstractElement;
 import org.xmlet.xsdparser.xsdelements.XsdSimpleType;
@@ -98,6 +98,9 @@ public class XsdEnumImport extends AbstractXsdImport<XsdSimpleType, RosettaEnume
 		}
 		RosettaEnumeration rosettaEnumeration = xsdMapping.getRosettaEnumerationFromSimple(xsdType);
 		return Collections.singletonMap(rosettaEnumeration, new TypeXMLConfiguration(
+				Optional.empty(),
+				Optional.empty(),
+				Optional.empty(),
 				Optional.empty(),
 				Optional.empty(),
 				Optional.empty(),

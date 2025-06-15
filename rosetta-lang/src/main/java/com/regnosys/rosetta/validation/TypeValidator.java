@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import org.eclipse.xtext.validation.Check;
 
@@ -26,8 +26,11 @@ public class TypeValidator extends AbstractDeclarativeRosettaValidator {
 	@Check
 	public void checkTypeNameIsCapitalized(Data data) {
 		// TODO: also enforce on Choice's once Choice does not extend Data anymore
-		if (Character.isLowerCase(data.getName().charAt(0))) {
-			warning("Type name should start with a capital", ROSETTA_NAMED__NAME, INVALID_CASE);
+		String name = data.getName();
+		if (name != null) {
+			if (Character.isLowerCase(name.charAt(0))) {
+				warning("Type name should start with a capital", ROSETTA_NAMED__NAME, INVALID_CASE);
+			}
 		}
 	}
 	
